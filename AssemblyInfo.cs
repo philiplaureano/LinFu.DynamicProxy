@@ -6,12 +6,12 @@ using System.Reflection;
 // change them to the information which is associated with the assembly
 // you compile.
 
-[assembly : AssemblyTitle("")]
-[assembly : AssemblyDescription("")]
+[assembly : AssemblyTitle("LinFu.DynamicProxy")]
+[assembly : AssemblyDescription("A dynamic proxy library for the .NET Framework")]
 [assembly : AssemblyConfiguration("")]
 [assembly : AssemblyCompany("")]
 [assembly : AssemblyProduct("")]
-[assembly : AssemblyCopyright("")]
+[assembly : AssemblyCopyright("(c) 2007-2010 Philip Laureano")]
 [assembly : AssemblyTrademark("")]
 [assembly : AssemblyCulture("")]
 
