@@ -1,35 +1,36 @@
-﻿//using System.Reflection;
-//using System.Runtime.CompilerServices;
-//using System.Runtime.InteropServices;
+using System.Reflection;
 
-//// General Information about an assembly is controlled through the following 
-//// set of attributes. Change these attribute values to modify the information
-//// associated with an assembly.
-//[assembly: AssemblyTitle("LinFu.DynamicProxy")]
-//[assembly: AssemblyDescription("")]
-//[assembly: AssemblyConfiguration("")]
-//[assembly: AssemblyCompany("eXPerience")]
-//[assembly: AssemblyProduct("LinFu.DynamicProxy")]
-//[assembly: AssemblyCopyright("Copyright © eXPerience 2007")]
-//[assembly: AssemblyTrademark("")]
-//[assembly: AssemblyCulture("")]
+// Information about this assembly is defined by the following
+// attributes.
+//
+// change them to the information which is associated with the assembly
+// you compile.
 
-//// Setting ComVisible to false makes the types in this assembly not visible 
-//// to COM components.  If you need to access a type in this assembly from 
-//// COM, set the ComVisible attribute to true on that type.
-//[assembly: ComVisible(false)]
+[assembly : AssemblyTitle("LinFu.DynamicProxy")]
+#if !SILVERLIGHT
+[assembly : AssemblyDescription("A dynamic proxy library for the .NET Framework")]
+#else
+[assembly: AssemblyDescription("A dynamic proxy library for Silverlight and the .NET Framework")]
+#endif
 
-//// The following GUID is for the ID of the typelib if this project is exposed to COM
-//[assembly: Guid("6c4c2cc7-a1af-45d8-957f-80ff18e0654e")]
+[assembly : AssemblyConfiguration("")]
+[assembly : AssemblyCompany("")]
+[assembly : AssemblyProduct("")]
+[assembly : AssemblyCopyright("(c) 2007-2010 Philip Laureano")]
+[assembly : AssemblyTrademark("")]
+[assembly : AssemblyCulture("")]
 
-//// Version information for an assembly consists of the following four values:
-////
-////      Major Version
-////      Minor Version 
-////      Build Number
-////      Revision
-////
-//// You can specify all the values or you can default the Revision and Build Numbers 
-//// by using the '*' as shown below:
-//[assembly: AssemblyVersion("1.0.0.0")]
-//[assembly: AssemblyFileVersion("1.0.0.0")]
+// The assembly version has following format :
+//
+// Major.Minor.Build.Revision
+//
+// You can specify all values by your own or you can build default build and revision
+// numbers with the '*' character (the default):
+
+[assembly : AssemblyVersion("1.0.3.*")]
+
+// The following attributes specify the key for the sign of your assembly. See the
+// .NET Framework documentation for more information about signing.
+// This is not required, if you don't want signing let these attributes like they're.
+
+[assembly : AssemblyDelaySign(false)]

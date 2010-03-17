@@ -11,11 +11,12 @@ namespace LinFu.DynamicProxy
     {
         private static readonly ConstructorInfo baseConstructor = typeof(object).GetConstructor(new Type[0]);
         private static readonly MethodInfo getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle");
+        private static readonly MethodInfo getQualifiedName = typeof(Type).GetMethod("get_AssemblyQualifiedName");
+#if !SILVERLIGHT
         private static readonly MethodInfo getValue = typeof(SerializationInfo).GetMethod("GetValue", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(Type) }, null);
         private static readonly MethodInfo setType = typeof(SerializationInfo).GetMethod("SetType", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(Type) }, null);
         private static readonly MethodInfo addValue = typeof(SerializationInfo).GetMethod("AddValue", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(object) }, null);
-        private static readonly MethodInfo getQualifiedName = typeof(Type).GetMethod("get_AssemblyQualifiedName");
-
+#endif
         private IProxyCache _cache = new ProxyCache();
         private IProxyMethodBuilder _proxyMethodBuilder;
 
@@ -96,14 +97,14 @@ namespace LinFu.DynamicProxy
             string moduleName = string.Format("{0}Module", typeName);
 
             AssemblyName name = new AssemblyName(assemblyName);
-#if DEBUG
+#if DEBUG && !SILVERLIGHT            
             AssemblyBuilderAccess access = AssemblyBuilderAccess.RunAndSave;
 #else
             AssemblyBuilderAccess access = AssemblyBuilderAccess.Run;
 #endif
             AssemblyBuilder assemblyBuilder = currentDomain.DefineDynamicAssembly(name, access);
 
-#if DEBUG
+#if DEBUG && !SILVERLIGHT            
             ModuleBuilder moduleBuilder =
                 assemblyBuilder.DefineDynamicModule(moduleName, string.Format("{0}.mod", moduleName), true);
 #else
@@ -134,10 +135,11 @@ namespace LinFu.DynamicProxy
                 BuildInterfaceList(interfaceType, interfaceList);
             }
 
+#if !SILVERLIGHT
             // Add the ISerializable interface so that it can be implemented
             if (!interfaceList.Contains(typeof(ISerializable)))
                 interfaceList.Add(typeof(ISerializable));
-
+#endif
             TypeBuilder typeBuilder =
                 moduleBuilder.DefineType(typeName, typeAttributes, parentType, interfaceList.ToArray());
 
@@ -157,33 +159,25 @@ namespace LinFu.DynamicProxy
             FieldInfo interceptorField = implementor.InterceptorField;
             foreach (MethodInfo method in proxyList)
             {
+#if !SILVERLIGHT
                 // Provide a custom implementation of ISerializable
                 // instead of redirecting it back to the interceptor
                 if (method.DeclaringType == typeof(ISerializable))
                     continue;
-
+#endif
                 _proxyMethodBuilder.CreateProxiedMethod(interceptorField, method, typeBuilder);
             }
 
+#if !SILVERLIGHT
             // Make the proxy serializable
             AddSerializationSupport(baseType, baseInterfaces, typeBuilder, interceptorField, defaultConstructor);
-
+#endif
             Type proxyType = typeBuilder.CreateType();
 
 #if DEBUG_PROXY_OUTPUT
             assemblyBuilder.Save("generatedAssembly.dll");
 #endif
             return proxyType;
-        }
-
-        private static void AddSerializationSupport(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
-        {
-            ConstructorInfo serializableConstructor = typeof(SerializableAttribute).GetConstructor(new Type[0]);
-            CustomAttributeBuilder customAttributeBuilder = new CustomAttributeBuilder(serializableConstructor, new object[0]);
-            typeBuilder.SetCustomAttribute(customAttributeBuilder);
-
-            DefineSerializationConstructor(baseInterfaces, typeBuilder, interceptorField, defaultConstructor);
-            ImplementGetObjectData(baseType, baseInterfaces, typeBuilder, interceptorField);
         }
 
         private static void BuildInterfaceList(Type currentType, List<Type> interfaceList)
@@ -237,8 +231,30 @@ namespace LinFu.DynamicProxy
                 }
             }
         }
+        private static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder)
+        {
+            MethodAttributes constructorAttributes = MethodAttributes.Public |
+                                                     MethodAttributes.HideBySig | MethodAttributes.SpecialName |
+                                                     MethodAttributes.RTSpecialName;
+
+            ConstructorBuilder constructor =
+                typeBuilder.DefineConstructor(constructorAttributes, CallingConventions.Standard, new Type[] { });
+
+            ILGenerator IL = constructor.GetILGenerator();
+
+            constructor.SetImplementationFlags(MethodImplAttributes.IL | MethodImplAttributes.Managed);
+
+            IL.Emit(OpCodes.Ldarg_0);
+            IL.Emit(OpCodes.Call, baseConstructor);
+            IL.Emit(OpCodes.Ret);
+
+            return constructor;
+        }
+
+#if !SILVERLIGHT
         private static void ImplementGetObjectData(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField)
         {
+
             MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.HideBySig |
                                           MethodAttributes.Virtual;
             Type[] parameterTypes = new Type[] { typeof(SerializationInfo), typeof(StreamingContext) };
@@ -286,10 +302,12 @@ namespace LinFu.DynamicProxy
             }
 
             IL.Emit(OpCodes.Ret);
+
         }
 
         private static void DefineSerializationConstructor(Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
         {
+
             MethodAttributes constructorAttributes = MethodAttributes.Public |
                                          MethodAttributes.HideBySig | MethodAttributes.SpecialName |
                                          MethodAttributes.RTSpecialName;
@@ -324,26 +342,18 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Stfld, interceptorField);
 
             IL.Emit(OpCodes.Ret);
-        }
 
-        private static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder)
+        }
+        private static void AddSerializationSupport(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
         {
-            MethodAttributes constructorAttributes = MethodAttributes.Public |
-                                                     MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                                                     MethodAttributes.RTSpecialName;
+            ConstructorInfo serializableConstructor = typeof(SerializableAttribute).GetConstructor(new Type[0]);
+            CustomAttributeBuilder customAttributeBuilder = new CustomAttributeBuilder(serializableConstructor, new object[0]);
+            typeBuilder.SetCustomAttribute(customAttributeBuilder);
 
-            ConstructorBuilder constructor =
-                typeBuilder.DefineConstructor(constructorAttributes, CallingConventions.Standard, new Type[] { });
+            DefineSerializationConstructor(baseInterfaces, typeBuilder, interceptorField, defaultConstructor);
+            ImplementGetObjectData(baseType, baseInterfaces, typeBuilder, interceptorField);
 
-            ILGenerator IL = constructor.GetILGenerator();
-
-            constructor.SetImplementationFlags(MethodImplAttributes.IL | MethodImplAttributes.Managed);
-
-            IL.Emit(OpCodes.Ldarg_0);
-            IL.Emit(OpCodes.Call, baseConstructor);
-            IL.Emit(OpCodes.Ret);
-
-            return constructor;
         }
+#endif
     }
 }

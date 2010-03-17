@@ -6,6 +6,7 @@ using System.Reflection;
 
 namespace LinFu.DynamicProxy
 {
+#if !SILVERLIGHT
     [Serializable]
     public class ProxyObjectReference : IObjectReference, ISerializable
     {
@@ -55,4 +56,5 @@ namespace LinFu.DynamicProxy
 
         #endregion
     }
+#endif
 }
