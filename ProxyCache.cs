@@ -6,6 +6,7 @@ namespace LinFu.DynamicProxy
 	public class ProxyCache : IProxyCache
 	{
 		private static readonly Dictionary<ProxyCacheEntry, Type> _cache = new Dictionary<ProxyCacheEntry, Type>();
+	    private static readonly object _lock = new object();
 
 		#region IProxyCache Members
 
@@ -20,14 +21,20 @@ namespace LinFu.DynamicProxy
 
 		public Type GetProxyType(Type baseType, params Type[] baseInterfaces)
 		{
-			ProxyCacheEntry entry = new ProxyCacheEntry(baseType, baseInterfaces);
-			return _cache[entry];
+            lock (_lock)
+            {
+                ProxyCacheEntry entry = new ProxyCacheEntry(baseType, baseInterfaces);
+                return _cache[entry];
+            }
 		}
 
 		public void StoreProxyType(Type result, Type baseType, params Type[] baseInterfaces)
 		{
-			ProxyCacheEntry entry = new ProxyCacheEntry(baseType, baseInterfaces);
-			_cache[entry] = result;
+            lock (_lock)
+            {
+                ProxyCacheEntry entry = new ProxyCacheEntry(baseType, baseInterfaces);
+                _cache[entry] = result;
+            }
 		}
 
 		#endregion
