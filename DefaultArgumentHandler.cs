@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -28,7 +29,7 @@ namespace LinFu.DynamicProxy
             int argumentPosition = 1;
             foreach (ParameterInfo param in parameters)
             {
-                Type parameterType = param.ParameterType;
+                Type parameterType = param.ParameterType.IsByRef ? param.ParameterType.GetElementType() : param.ParameterType; 
                 // args[N] = argumentN (pseudocode)
                 IL.Emit(OpCodes.Ldloc_S, 0);
                 IL.Emit(OpCodes.Ldc_I4, index);
@@ -47,7 +48,34 @@ namespace LinFu.DynamicProxy
 
                 bool isGeneric = parameterType.IsGenericParameter;
 
-                if (parameterType.IsValueType || isGeneric)
+                if (param.ParameterType.IsByRef)
+                {
+                    var typeName = param.ParameterType.Name;
+                    var ldindInstruction = OpCodes.Ldind_Ref;
+                    var ldindMap = new Dictionary<string, OpCode>();
+                    ldindMap["Bool&"] = OpCodes.Ldind_I1;
+                    ldindMap["Int8&"] = OpCodes.Ldind_I1;
+                    ldindMap["Uint8&"] = OpCodes.Ldind_I1;
+
+                    ldindMap["Int16&"] = OpCodes.Ldind_I2;
+                    ldindMap["Uint16&"] = OpCodes.Ldind_I2;
+
+                    ldindMap["Uint32&"] = OpCodes.Ldind_I4;
+                    ldindMap["Int32&"] = OpCodes.Ldind_I4;
+
+                    ldindMap["IntPtr"] = OpCodes.Ldind_I4;
+                    ldindMap["Uint64&"] = OpCodes.Ldind_I8;
+                    ldindMap["Int64&"] = OpCodes.Ldind_I8;
+                    ldindMap["Float32&"] = OpCodes.Ldind_R4;
+                    ldindMap["Float64&"] = OpCodes.Ldind_R8;
+
+                    if (ldindMap.ContainsKey(typeName))
+                        ldindInstruction = ldindMap[typeName];
+
+                    IL.Emit(ldindInstruction);
+                }
+
+                if (parameterType.IsValueType || parameterType.IsByRef || isGeneric)
                     IL.Emit(OpCodes.Box, parameterType);
 
                 IL.Emit(OpCodes.Stelem_Ref);

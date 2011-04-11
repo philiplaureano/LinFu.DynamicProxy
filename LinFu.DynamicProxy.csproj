@@ -90,6 +90,7 @@
     <Compile Include="ProxyFactory.cs" />
     <Compile Include="ProxyImplementor.cs" />
     <Compile Include="ProxyObjectReference.cs" />
+    <Compile Include="StindMap.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

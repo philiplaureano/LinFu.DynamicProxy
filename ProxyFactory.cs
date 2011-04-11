@@ -11,7 +11,6 @@ namespace LinFu.DynamicProxy
     {
         private static readonly ConstructorInfo baseConstructor = typeof(object).GetConstructor(new Type[0]);
         private static readonly MethodInfo getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle");
-        private static readonly MethodInfo getQualifiedName = typeof(Type).GetMethod("get_AssemblyQualifiedName");
 #if !SILVERLIGHT
         private static readonly MethodInfo getValue = typeof(SerializationInfo).GetMethod("GetValue", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(Type) }, null);
         private static readonly MethodInfo setType = typeof(SerializationInfo).GetMethod("SetType", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(Type) }, null);
@@ -283,7 +282,8 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Ldstr, baseType.AssemblyQualifiedName);
             IL.Emit(OpCodes.Callvirt, addValue);
 
-            int baseInterfaceCount = baseInterfaces.Length;
+            var interfaces = baseInterfaces ?? new Type[0];
+            int baseInterfaceCount = interfaces.Length;
 
             // Save the number of base interfaces
             IL.Emit(OpCodes.Ldarg_1);
@@ -293,7 +293,7 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Callvirt, addValue);
 
             int index = 0;
-            foreach (Type baseInterface in baseInterfaces)
+            foreach (Type baseInterface in interfaces)
             {
                 IL.Emit(OpCodes.Ldarg_1);
                 IL.Emit(OpCodes.Ldstr, string.Format("__baseInterface{0}", index++));

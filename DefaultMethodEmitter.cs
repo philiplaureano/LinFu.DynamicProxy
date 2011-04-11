@@ -22,7 +22,7 @@ namespace LinFu.DynamicProxy
         private static ConstructorInfo notImplementedConstructor =
             typeof (NotImplementedException).GetConstructor(new Type[0]);
 
-        private static Dictionary<string, OpCode> stindMap = new Dictionary<string, OpCode>();
+        private static Dictionary<string, OpCode> stindMap = new StindMap();
         private IArgumentHandler _argumentHandler;
 
         static DefaultMethodEmitter()
@@ -35,23 +35,7 @@ namespace LinFu.DynamicProxy
                 };
 
             infoConstructor = typeof (InvocationInfo).GetConstructor(constructorTypes);
- 
 
-            stindMap["Bool&"] = OpCodes.Stind_I1;
-            stindMap["Int8&"] = OpCodes.Stind_I1;
-            stindMap["Uint8&"] = OpCodes.Stind_I1;
-           
-            stindMap["Int16&"] = OpCodes.Stind_I2;
-            stindMap["Uint16&"] = OpCodes.Stind_I2;
-
-            stindMap["Uint32&"] = OpCodes.Stind_I4;
-            stindMap["Int32&"] = OpCodes.Stind_I4;
-
-            stindMap["IntPtr"] = OpCodes.Stind_I4;
-            stindMap["Uint64&"] = OpCodes.Stind_I8;
-            stindMap["Int64&"] = OpCodes.Stind_I8;
-            stindMap["Float32&"] = OpCodes.Stind_R4;
-            stindMap["Float64&"] = OpCodes.Stind_R8;
         }
 
         public DefaultMethodEmitter() : this(new DefaultArgumentHandler())
@@ -62,8 +46,6 @@ namespace LinFu.DynamicProxy
         {
             _argumentHandler = argumentHandler;
         }
-
-        #region IMethodBodyEmitter Members
 
         public void EmitMethodBody(ILGenerator IL, MethodInfo method, FieldInfo field)
         {
@@ -126,8 +108,6 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Ret);
         }
 
-        #endregion
-
         private static void SaveRefArguments(ILGenerator IL, ParameterInfo[] parameters)
         {
             // Save the arguments returned from the handler method
@@ -150,10 +130,11 @@ namespace LinFu.DynamicProxy
                 // Load the argument value
                 IL.Emit(OpCodes.Ldloc_0);
                 IL.Emit(OpCodes.Ldc_I4, param.Position);
-                IL.Emit(OpCodes.Ldelem_Ref);
+                
+                var ldelemInstruction = OpCodes.Ldelem_Ref;
+                IL.Emit(ldelemInstruction);
 
-                typeName = typeName.Replace("&", "");
-                Type unboxedType = Type.GetType(typeName);
+                var unboxedType = param.ParameterType.IsByRef ? param.ParameterType.GetElementType() : param.ParameterType; 
 
                 IL.Emit(OpCodes.Unbox_Any, unboxedType);
 
