@@ -7,16 +7,8 @@ using System.Reflection;
 // you compile.
 
 [assembly : AssemblyTitle("LinFu.DynamicProxy")]
-#if !SILVERLIGHT
-[assembly : AssemblyDescription("A dynamic proxy library for the .NET Framework")]
-#else
-[assembly: AssemblyDescription("A dynamic proxy library for Silverlight and the .NET Framework")]
-#endif
-
-[assembly : AssemblyConfiguration("")]
-[assembly : AssemblyCompany("")]
-[assembly : AssemblyProduct("")]
-[assembly : AssemblyCopyright("(c) 2007-2010 Philip Laureano")]
+[assembly : AssemblyDescription("A dynamic proxy library for .NET Standard")]
+[assembly : AssemblyCopyright("(c) 2007-2018 Philip Laureano")]
 [assembly : AssemblyTrademark("")]
 [assembly : AssemblyCulture("")]
 
@@ -27,7 +19,8 @@ using System.Reflection;
 // You can specify all values by your own or you can build default build and revision
 // numbers with the '*' character (the default):
 
-[assembly : AssemblyVersion("1.0.4.*")]
+[assembly : AssemblyVersion("3.0")]
+[assembly : AssemblyFileVersion("3.0")]
 
 // The following attributes specify the key for the sign of your assembly. See the
 // .NET Framework documentation for more information about signing.

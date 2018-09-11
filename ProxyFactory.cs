@@ -96,19 +96,10 @@ namespace LinFu.DynamicProxy
             string moduleName = string.Format("{0}Module", typeName);
 
             AssemblyName name = new AssemblyName(assemblyName);
-#if DEBUG && !SILVERLIGHT            
-            AssemblyBuilderAccess access = AssemblyBuilderAccess.RunAndSave;
-#else
             AssemblyBuilderAccess access = AssemblyBuilderAccess.Run;
-#endif
-            AssemblyBuilder assemblyBuilder = currentDomain.DefineDynamicAssembly(name, access);
+            AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(name, access);
 
-#if DEBUG && !SILVERLIGHT            
-            ModuleBuilder moduleBuilder =
-                assemblyBuilder.DefineDynamicModule(moduleName, string.Format("{0}.mod", moduleName), true);
-#else
             ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
-#endif
 
             TypeAttributes typeAttributes = TypeAttributes.AutoClass | TypeAttributes.Class |
                                             TypeAttributes.Public | TypeAttributes.BeforeFieldInit;
@@ -171,7 +162,7 @@ namespace LinFu.DynamicProxy
             // Make the proxy serializable
             AddSerializationSupport(baseType, baseInterfaces, typeBuilder, interceptorField, defaultConstructor);
 #endif
-            Type proxyType = typeBuilder.CreateType();
+            Type proxyType = typeBuilder.CreateTypeInfo();
 
 #if DEBUG_PROXY_OUTPUT
             assemblyBuilder.Save("generatedAssembly.dll");
@@ -182,7 +173,7 @@ namespace LinFu.DynamicProxy
         private static void BuildInterfaceList(Type currentType, List<Type> interfaceList)
         {
             Type[] interfaces = currentType.GetInterfaces();
-            if (interfaces == null || interfaces.Length == 0)
+            if (interfaces.Length == 0)
                 return;
 
             foreach (Type current in interfaces)
