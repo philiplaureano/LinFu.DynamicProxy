@@ -6,6 +6,6 @@ namespace LinFu.DynamicProxy
     public interface IMethodBodyEmitter
     {
         void EmitMethodBody(ILGenerator IL, MethodInfo method,
-                            FieldInfo field);
+            FieldInfo field);
     }
 }

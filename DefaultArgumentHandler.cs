@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -11,11 +10,11 @@ namespace LinFu.DynamicProxy
 
         public void PushArguments(ParameterInfo[] parameters, ILGenerator IL, bool isStatic)
         {
-            int parameterCount = parameters == null ? 0 : parameters.Length;
+            var parameterCount = parameters == null ? 0 : parameters.Length;
 
             // object[] args = new object[size];
             IL.Emit(OpCodes.Ldc_I4, parameterCount);
-            IL.Emit(OpCodes.Newarr, typeof (object));
+            IL.Emit(OpCodes.Newarr, typeof(object));
             IL.Emit(OpCodes.Stloc_S, 0);
 
             if (parameterCount == 0)
@@ -25,11 +24,13 @@ namespace LinFu.DynamicProxy
             }
 
             // Populate the object array with the list of arguments
-            int index = 0;
-            int argumentPosition = 1;
-            foreach (ParameterInfo param in parameters)
+            var index = 0;
+            var argumentPosition = 1;
+            foreach (var param in parameters)
             {
-                Type parameterType = param.ParameterType.IsByRef ? param.ParameterType.GetElementType() : param.ParameterType; 
+                var parameterType = param.ParameterType.IsByRef
+                    ? param.ParameterType.GetElementType()
+                    : param.ParameterType;
                 // args[N] = argumentN (pseudocode)
                 IL.Emit(OpCodes.Ldloc_S, 0);
                 IL.Emit(OpCodes.Ldc_I4, index);
@@ -46,7 +47,7 @@ namespace LinFu.DynamicProxy
 
                 IL.Emit(OpCodes.Ldarg, argumentPosition);
 
-                bool isGeneric = parameterType.IsGenericParameter;
+                var isGeneric = parameterType.IsGenericParameter;
 
                 if (param.ParameterType.IsByRef)
                 {
@@ -83,6 +84,7 @@ namespace LinFu.DynamicProxy
                 index++;
                 argumentPosition++;
             }
+
             IL.Emit(OpCodes.Ldloc_S, 0);
         }
 

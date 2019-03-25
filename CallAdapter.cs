@@ -2,7 +2,7 @@ namespace LinFu.DynamicProxy
 {
     public class CallAdapter : IInterceptor
     {
-        private IInvokeWrapper _wrapper;
+        private readonly IInvokeWrapper _wrapper;
 
         public CallAdapter(IInvokeWrapper wrapper)
         {

@@ -8,34 +8,37 @@ namespace LinFu.DynamicProxy
 {
     internal class DefaultMethodEmitter : IMethodBodyEmitter
     {
-        private static MethodInfo getInterceptor = null;
-        
-        private static MethodInfo getGenericMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle",
-                    BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }, null);
+        private static readonly MethodInfo getInterceptor;
 
-        private static MethodInfo getMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
-        private static MethodInfo getTypeFromHandle = typeof (Type).GetMethod("GetTypeFromHandle");
-        private static MethodInfo handlerMethod = typeof (IInterceptor).GetMethod("Intercept");
-        private static ConstructorInfo infoConstructor;
-        private static PropertyInfo interceptorProperty = typeof (IProxy).GetProperty("Interceptor");
+        private static readonly MethodInfo getGenericMethodFromHandle = typeof(MethodBase).GetMethod(
+            "GetMethodFromHandle",
+            BindingFlags.Public | BindingFlags.Static, null,
+            new[] {typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle)}, null);
 
-        private static ConstructorInfo notImplementedConstructor =
-            typeof (NotImplementedException).GetConstructor(new Type[0]);
+        private static readonly MethodInfo getMethodFromHandle =
+            typeof(MethodBase).GetMethod("GetMethodFromHandle", new[] {typeof(RuntimeMethodHandle)});
 
-        private static Dictionary<string, OpCode> stindMap = new StindMap();
-        private IArgumentHandler _argumentHandler;
+        private static readonly MethodInfo getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle");
+        private static readonly MethodInfo handlerMethod = typeof(IInterceptor).GetMethod("Intercept");
+        private static readonly ConstructorInfo infoConstructor;
+        private static readonly PropertyInfo interceptorProperty = typeof(IProxy).GetProperty("Interceptor");
+
+        private static readonly ConstructorInfo notImplementedConstructor =
+            typeof(NotImplementedException).GetConstructor(new Type[0]);
+
+        private static readonly Dictionary<string, OpCode> stindMap = new StindMap();
+        private readonly IArgumentHandler _argumentHandler;
 
         static DefaultMethodEmitter()
         {
             getInterceptor = interceptorProperty.GetGetMethod();
-            Type[] constructorTypes = new Type[]
-                {
-                    typeof (object), typeof (MethodInfo),
-                    typeof (StackTrace), typeof (Type[]), typeof (object[])
-                };
+            Type[] constructorTypes =
+            {
+                typeof(object), typeof(MethodInfo),
+                typeof(StackTrace), typeof(Type[]), typeof(object[])
+            };
 
-            infoConstructor = typeof (InvocationInfo).GetConstructor(constructorTypes);
-
+            infoConstructor = typeof(InvocationInfo).GetConstructor(constructorTypes);
         }
 
         public DefaultMethodEmitter() : this(new DefaultArgumentHandler())
@@ -49,12 +52,12 @@ namespace LinFu.DynamicProxy
 
         public void EmitMethodBody(ILGenerator IL, MethodInfo method, FieldInfo field)
         {
-            bool isStatic = false;
+            var isStatic = false;
 
-            ParameterInfo[] parameters = method.GetParameters();
-            IL.DeclareLocal(typeof (object[]));
-            IL.DeclareLocal(typeof (InvocationInfo));
-            IL.DeclareLocal(typeof (Type[]));
+            var parameters = method.GetParameters();
+            IL.DeclareLocal(typeof(object[]));
+            IL.DeclareLocal(typeof(InvocationInfo));
+            IL.DeclareLocal(typeof(Type[]));
 
             IL.Emit(OpCodes.Ldarg_0);
             IL.Emit(OpCodes.Callvirt, getInterceptor);
@@ -62,7 +65,7 @@ namespace LinFu.DynamicProxy
             // if (interceptor == null)
             // 		throw new NullReferenceException();
 
-            Label skipThrow = IL.DefineLabel();
+            var skipThrow = IL.DefineLabel();
 
             IL.Emit(OpCodes.Dup);
             IL.Emit(OpCodes.Ldnull);
@@ -76,8 +79,8 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Ldarg_0);
 
             // Push the MethodInfo onto the stack            
-            Type declaringType = method.DeclaringType;
-            
+            var declaringType = method.DeclaringType;
+
             IL.Emit(OpCodes.Ldtoken, method);
             if (declaringType.IsGenericType)
             {
@@ -89,7 +92,7 @@ namespace LinFu.DynamicProxy
                 IL.Emit(OpCodes.Call, getMethodFromHandle);
             }
 
-            IL.Emit(OpCodes.Castclass, typeof (MethodInfo));
+            IL.Emit(OpCodes.Castclass, typeof(MethodInfo));
 
             PushStackTrace(IL);
             PushGenericArguments(method, IL);
@@ -111,16 +114,16 @@ namespace LinFu.DynamicProxy
         private static void SaveRefArguments(ILGenerator IL, ParameterInfo[] parameters)
         {
             // Save the arguments returned from the handler method
-            MethodInfo getArguments = typeof (InvocationInfo).GetMethod("get_Arguments");
+            var getArguments = typeof(InvocationInfo).GetMethod("get_Arguments");
             IL.Emit(OpCodes.Ldloc_1);
             IL.Emit(OpCodes.Call, getArguments);
             IL.Emit(OpCodes.Stloc_0);
 
-            foreach (ParameterInfo param in parameters)
+            foreach (var param in parameters)
             {
-                string typeName = param.ParameterType.Name;
+                var typeName = param.ParameterType.Name;
 
-                bool isRef = param.ParameterType.IsByRef && typeName.EndsWith("&");
+                var isRef = param.ParameterType.IsByRef && typeName.EndsWith("&");
                 if (!isRef)
                     continue;
 
@@ -130,15 +133,17 @@ namespace LinFu.DynamicProxy
                 // Load the argument value
                 IL.Emit(OpCodes.Ldloc_0);
                 IL.Emit(OpCodes.Ldc_I4, param.Position);
-                
+
                 var ldelemInstruction = OpCodes.Ldelem_Ref;
                 IL.Emit(ldelemInstruction);
 
-                var unboxedType = param.ParameterType.IsByRef ? param.ParameterType.GetElementType() : param.ParameterType; 
+                var unboxedType = param.ParameterType.IsByRef
+                    ? param.ParameterType.GetElementType()
+                    : param.ParameterType;
 
                 IL.Emit(OpCodes.Unbox_Any, unboxedType);
 
-                OpCode stind = GetStindInstruction(param.ParameterType);
+                var stind = GetStindInstruction(param.ParameterType);
                 IL.Emit(stind);
             }
         }
@@ -149,13 +154,13 @@ namespace LinFu.DynamicProxy
                 return OpCodes.Stind_Ref;
 
 
-            string typeName = parameterType.Name;
+            var typeName = parameterType.Name;
 
             if (!stindMap.ContainsKey(typeName) && parameterType.IsByRef)
                 return OpCodes.Stind_Ref;
 
             Debug.Assert(stindMap.ContainsKey(typeName));
-            OpCode result = stindMap[typeName];
+            var result = stindMap[typeName];
 
 
             return result;
@@ -169,22 +174,22 @@ namespace LinFu.DynamicProxy
 
         private void PushGenericArguments(MethodInfo method, ILGenerator IL)
         {
-            Type[] typeParameters = method.GetGenericArguments();
+            var typeParameters = method.GetGenericArguments();
 
             // If this is a generic method, we need to store
             // the generic method arguments
-            int genericTypeCount = typeParameters == null ? 0 : typeParameters.Length;
+            var genericTypeCount = typeParameters == null ? 0 : typeParameters.Length;
 
             // Type[] genericTypeArgs = new Type[genericTypeCount];
             IL.Emit(OpCodes.Ldc_I4, genericTypeCount);
-            IL.Emit(OpCodes.Newarr, typeof (Type));
+            IL.Emit(OpCodes.Newarr, typeof(Type));
 
             if (genericTypeCount == 0)
                 return;
 
-            for (int index = 0; index < genericTypeCount; index++)
+            for (var index = 0; index < genericTypeCount; index++)
             {
-                Type currentType = typeParameters[index];
+                var currentType = typeParameters[index];
 
                 IL.Emit(OpCodes.Dup);
                 IL.Emit(OpCodes.Ldc_I4, index);
@@ -196,9 +201,9 @@ namespace LinFu.DynamicProxy
 
         private void PackageReturnType(MethodInfo method, ILGenerator IL)
         {
-            Type returnType = method.ReturnType;
+            var returnType = method.ReturnType;
             // Unbox the return value if necessary
-            if (returnType == typeof (void))
+            if (returnType == typeof(void))
             {
                 IL.Emit(OpCodes.Pop);
                 return;

@@ -11,10 +11,7 @@ namespace LinFu.DynamicProxy
 
         public ProxyCacheEntry(Type baseType, Type[] interfaces)
         {
-            if (baseType == null)
-            {
-                throw new ArgumentNullException("baseType");
-            }
+            if (baseType == null) throw new ArgumentNullException("baseType");
             BaseType = baseType;
             Interfaces = interfaces;
 
@@ -25,19 +22,14 @@ namespace LinFu.DynamicProxy
             }
 
             // duplicated type exclusion
-            Dictionary<Type, object> set = new Dictionary<Type, object>(interfaces.Length + 1);
+            var set = new Dictionary<Type, object>(interfaces.Length + 1);
             set[baseType] = null;
-            foreach (Type type in interfaces)
-            {
+            foreach (var type in interfaces)
                 if (type != null)
                     set[type] = null;
-            }
 
             hashCode = 0;
-            foreach (Type type in set.Keys)
-            {
-                hashCode ^= type.GetHashCode();
-            }
+            foreach (var type in set.Keys) hashCode ^= type.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -45,7 +37,7 @@ namespace LinFu.DynamicProxy
             if (!(obj is ProxyCacheEntry))
                 return false;
 
-            ProxyCacheEntry other = (ProxyCacheEntry)obj;
+            var other = (ProxyCacheEntry) obj;
             return hashCode == other.GetHashCode();
         }
 

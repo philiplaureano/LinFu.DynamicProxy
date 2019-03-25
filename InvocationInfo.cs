@@ -7,71 +7,48 @@ namespace LinFu.DynamicProxy
 {
     public class InvocationInfo
     {
-        private object[] _args;
-        private object _proxy;
-        private MethodInfo _targetMethod;
-        private StackTrace _trace;
-        private Type[] _typeArgs;
-
         public InvocationInfo(object proxy, MethodInfo targetMethod,
-                              StackTrace trace, Type[] genericTypeArgs, object[] args)
+            StackTrace trace, Type[] genericTypeArgs, object[] args)
         {
-            _proxy = proxy;
-            _targetMethod = targetMethod;
-            _typeArgs = genericTypeArgs;
-            _args = args;
-            _trace = trace;
+            Target = proxy;
+            TargetMethod = targetMethod;
+            TypeArguments = genericTypeArgs;
+            Arguments = args;
+            StackTrace = trace;
         }
 
-        public object Target
-        {
-            get { return _proxy; }
-        }
+        public object Target { get; }
 
-        public MethodInfo TargetMethod
-        {
-            get { return _targetMethod; }
-        }
+        public MethodInfo TargetMethod { get; }
 
-        public StackTrace StackTrace
-        {
-            get { return _trace; }
-        }
+        public StackTrace StackTrace { get; }
 
-        public MethodInfo CallingMethod
-        {
-            get { return (MethodInfo) _trace.GetFrame(0).GetMethod(); }
-        }
+        public MethodInfo CallingMethod => (MethodInfo) StackTrace.GetFrame(0).GetMethod();
 
-        public Type[] TypeArguments
-        {
-            get { return _typeArgs; }
-        }
+        public Type[] TypeArguments { get; }
 
-        public object[] Arguments
-        {
-            get { return _args; }
-        }
+        public object[] Arguments { get; }
 
         public void SetArgument(int position, object arg)
         {
-            _args[position] = arg;
+            Arguments[position] = arg;
         }
 
         public override string ToString()
         {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
             builder.AppendFormat("Calling Method: {0,30:G}\n", GetMethodName(CallingMethod));
-            builder.AppendFormat("Target Method:{0,30:G}\n", GetMethodName(_targetMethod));
+            builder.AppendFormat("Target Method:{0,30:G}\n", GetMethodName(TargetMethod));
             builder.AppendLine("Arguments:");
 
-            foreach (ParameterInfo info in _targetMethod.GetParameters())
+            foreach (var info in TargetMethod.GetParameters())
             {
-                object currentArgument = _args[info.Position];
+                var currentArgument = Arguments[info.Position];
                 if (currentArgument == null)
                     currentArgument = "(null)";
-                builder.AppendFormat("\t{0,10:G}: {1}\n", info.Name, currentArgument.ToString());
+                builder.AppendFormat("\t{0,10:G}: {1}\n", info.Name, currentArgument);
             }
+
             builder.AppendLine();
 
             return builder.ToString();
@@ -79,15 +56,15 @@ namespace LinFu.DynamicProxy
 
         private string GetMethodName(MethodInfo method)
         {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
             builder.AppendFormat("{0}.{1}", method.DeclaringType.Name, method.Name);
             builder.Append("(");
 
-            ParameterInfo[] parameters = method.GetParameters();
-            int parameterCount = parameters != null ? parameters.Length : 0;
+            var parameters = method.GetParameters();
+            var parameterCount = parameters != null ? parameters.Length : 0;
 
-            int index = 0;
-            foreach (ParameterInfo param in parameters)
+            var index = 0;
+            foreach (var param in parameters)
             {
                 index++;
                 builder.AppendFormat("{0} {1}", param.ParameterType.Name, param.Name);
@@ -95,6 +72,7 @@ namespace LinFu.DynamicProxy
                 if (index < parameterCount)
                     builder.Append(", ");
             }
+
             builder.Append(")");
 
             return builder.ToString();

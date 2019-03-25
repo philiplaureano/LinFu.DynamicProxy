@@ -11,13 +11,6 @@ namespace LinFu.DynamicProxy
     {
         private static readonly ConstructorInfo baseConstructor = typeof(object).GetConstructor(new Type[0]);
         private static readonly MethodInfo getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle");
-#if !SILVERLIGHT
-        private static readonly MethodInfo getValue = typeof(SerializationInfo).GetMethod("GetValue", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(Type) }, null);
-        private static readonly MethodInfo setType = typeof(SerializationInfo).GetMethod("SetType", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(Type) }, null);
-        private static readonly MethodInfo addValue = typeof(SerializationInfo).GetMethod("AddValue", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(object) }, null);
-#endif
-        private IProxyCache _cache = new ProxyCache();
-        private IProxyMethodBuilder _proxyMethodBuilder;
 
         public ProxyFactory()
             : this(new DefaultyProxyMethodBuilder())
@@ -26,20 +19,12 @@ namespace LinFu.DynamicProxy
 
         public ProxyFactory(IProxyMethodBuilder proxyMethodBuilder)
         {
-            _proxyMethodBuilder = proxyMethodBuilder;
+            ProxyMethodBuilder = proxyMethodBuilder;
         }
 
-        public IProxyCache Cache
-        {
-            get { return _cache; }
-            set { _cache = value; }
-        }
+        public IProxyCache Cache { get; set; } = new ProxyCache();
 
-        public IProxyMethodBuilder ProxyMethodBuilder
-        {
-            get { return _proxyMethodBuilder; }
-            set { _proxyMethodBuilder = value; }
-        }
+        public IProxyMethodBuilder ProxyMethodBuilder { get; set; }
 
         public virtual object CreateProxy(Type instanceType, IInvokeWrapper wrapper, params Type[] baseInterfaces)
         {
@@ -48,9 +33,9 @@ namespace LinFu.DynamicProxy
 
         public virtual object CreateProxy(Type instanceType, IInterceptor interceptor, params Type[] baseInterfaces)
         {
-            Type proxyType = CreateProxyType(instanceType, baseInterfaces);
-            object result = Activator.CreateInstance(proxyType);
-            IProxy proxy = (IProxy)result;
+            var proxyType = CreateProxyType(instanceType, baseInterfaces);
+            var result = Activator.CreateInstance(proxyType);
+            var proxy = (IProxy) result;
             proxy.Interceptor = interceptor;
 
             return result;
@@ -63,11 +48,11 @@ namespace LinFu.DynamicProxy
 
         public virtual T CreateProxy<T>(IInterceptor interceptor, params Type[] baseInterfaces)
         {
-            Type proxyType = CreateProxyType(typeof(T), baseInterfaces);
-            T result = (T)Activator.CreateInstance(proxyType);
+            var proxyType = CreateProxyType(typeof(T), baseInterfaces);
+            var result = (T) Activator.CreateInstance(proxyType);
             Debug.Assert(result != null);
 
-            IProxy proxy = (IProxy)result;
+            var proxy = (IProxy) result;
             proxy.Interceptor = interceptor;
 
             return result;
@@ -76,42 +61,42 @@ namespace LinFu.DynamicProxy
         public virtual Type CreateProxyType(Type baseType, params Type[] baseInterfaces)
         {
             // Reuse the previous results, if possible
-            if (_cache != null && _cache.Contains(baseType, baseInterfaces))
-                return _cache.GetProxyType(baseType, baseInterfaces);
+            if (Cache != null && Cache.Contains(baseType, baseInterfaces))
+                return Cache.GetProxyType(baseType, baseInterfaces);
 
-            Type result = CreateUncachedProxyType(baseInterfaces, baseType);
+            var result = CreateUncachedProxyType(baseInterfaces, baseType);
 
             // Cache the proxy type
-            if (result != null && _cache != null)
-                _cache.StoreProxyType(result, baseType, baseInterfaces);
+            if (result != null && Cache != null)
+                Cache.StoreProxyType(result, baseType, baseInterfaces);
 
             return result;
         }
 
         private Type CreateUncachedProxyType(Type[] baseInterfaces, Type baseType)
         {
-            AppDomain currentDomain = AppDomain.CurrentDomain;
-            string typeName = string.Format("{0}Proxy", baseType.Name);
-            string assemblyName = string.Format("{0}Assembly", typeName);
-            string moduleName = string.Format("{0}Module", typeName);
+            var currentDomain = AppDomain.CurrentDomain;
+            var typeName = string.Format("{0}Proxy", baseType.Name);
+            var assemblyName = string.Format("{0}Assembly", typeName);
+            var moduleName = string.Format("{0}Module", typeName);
 
-            AssemblyName name = new AssemblyName(assemblyName);
-            AssemblyBuilderAccess access = AssemblyBuilderAccess.Run;
-            AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(name, access);
+            var name = new AssemblyName(assemblyName);
+            var access = AssemblyBuilderAccess.Run;
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(name, access);
 
-            ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
+            var moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
 
-            TypeAttributes typeAttributes = TypeAttributes.AutoClass | TypeAttributes.Class |
-                                            TypeAttributes.Public | TypeAttributes.BeforeFieldInit;
+            var typeAttributes = TypeAttributes.AutoClass | TypeAttributes.Class |
+                                 TypeAttributes.Public | TypeAttributes.BeforeFieldInit;
 
-            List<Type> interfaceList = new List<Type>();
+            var interfaceList = new List<Type>();
             if (baseInterfaces != null && baseInterfaces.Length > 0)
                 interfaceList.AddRange(baseInterfaces);
 
 
             // Use the proxy dummy as the base type 
             // since we're not inheriting from any class type
-            Type parentType = baseType;
+            var parentType = baseType;
             if (baseType.IsInterface)
             {
                 parentType = typeof(ProxyDummy);
@@ -119,35 +104,32 @@ namespace LinFu.DynamicProxy
             }
 
             // Add any inherited interfaces
-            Type[] interfaces = interfaceList.ToArray();
-            foreach (Type interfaceType in interfaces)
-            {
-                BuildInterfaceList(interfaceType, interfaceList);
-            }
+            var interfaces = interfaceList.ToArray();
+            foreach (var interfaceType in interfaces) BuildInterfaceList(interfaceType, interfaceList);
 
 #if !SILVERLIGHT
             // Add the ISerializable interface so that it can be implemented
             if (!interfaceList.Contains(typeof(ISerializable)))
                 interfaceList.Add(typeof(ISerializable));
 #endif
-            TypeBuilder typeBuilder =
+            var typeBuilder =
                 moduleBuilder.DefineType(typeName, typeAttributes, parentType, interfaceList.ToArray());
 
-            ConstructorBuilder defaultConstructor = DefineConstructor(typeBuilder);
+            var defaultConstructor = DefineConstructor(typeBuilder);
 
             // Implement IProxy
-            ProxyImplementor implementor = new ProxyImplementor();
+            var implementor = new ProxyImplementor();
             implementor.ImplementProxy(typeBuilder);
 
-            MethodInfo[] methods = baseType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-            List<MethodInfo> proxyList = new List<MethodInfo>();
+            var methods = baseType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            var proxyList = new List<MethodInfo>();
             BuildMethodList(interfaceList, methods, proxyList);
 
 
-            Debug.Assert(_proxyMethodBuilder != null, "ProxyMethodBuilder cannot be null");
+            Debug.Assert(ProxyMethodBuilder != null, "ProxyMethodBuilder cannot be null");
 
             FieldInfo interceptorField = implementor.InterceptorField;
-            foreach (MethodInfo method in proxyList)
+            foreach (var method in proxyList)
             {
 #if !SILVERLIGHT
                 // Provide a custom implementation of ISerializable
@@ -155,7 +137,7 @@ namespace LinFu.DynamicProxy
                 if (method.DeclaringType == typeof(ISerializable))
                     continue;
 #endif
-                _proxyMethodBuilder.CreateProxiedMethod(interceptorField, method, typeBuilder);
+                ProxyMethodBuilder.CreateProxiedMethod(interceptorField, method, typeBuilder);
             }
 
 #if !SILVERLIGHT
@@ -172,11 +154,11 @@ namespace LinFu.DynamicProxy
 
         private static void BuildInterfaceList(Type currentType, List<Type> interfaceList)
         {
-            Type[] interfaces = currentType.GetInterfaces();
+            var interfaces = currentType.GetInterfaces();
             if (interfaces.Length == 0)
                 return;
 
-            foreach (Type current in interfaces)
+            foreach (var current in interfaces)
             {
                 if (interfaceList.Contains(current))
                     continue;
@@ -187,9 +169,9 @@ namespace LinFu.DynamicProxy
         }
 
         private static void BuildMethodList(IEnumerable<Type> interfaceList, IEnumerable<MethodInfo> methods,
-                                            List<MethodInfo> proxyList)
+            List<MethodInfo> proxyList)
         {
-            foreach (MethodInfo method in methods)
+            foreach (var method in methods)
             {
                 //if (method.DeclaringType == typeof(object))
                 //    continue;
@@ -209,10 +191,10 @@ namespace LinFu.DynamicProxy
                 proxyList.Add(method);
             }
 
-            foreach (Type interfaceType in interfaceList)
+            foreach (var interfaceType in interfaceList)
             {
-                MethodInfo[] interfaceMethods = interfaceType.GetMethods();
-                foreach (MethodInfo interfaceMethod in interfaceMethods)
+                var interfaceMethods = interfaceType.GetMethods();
+                foreach (var interfaceMethod in interfaceMethods)
                 {
                     if (proxyList.Contains(interfaceMethod))
                         continue;
@@ -221,16 +203,17 @@ namespace LinFu.DynamicProxy
                 }
             }
         }
+
         private static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder)
         {
-            MethodAttributes constructorAttributes = MethodAttributes.Public |
-                                                     MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                                                     MethodAttributes.RTSpecialName;
+            var constructorAttributes = MethodAttributes.Public |
+                                        MethodAttributes.HideBySig | MethodAttributes.SpecialName |
+                                        MethodAttributes.RTSpecialName;
 
-            ConstructorBuilder constructor =
+            var constructor =
                 typeBuilder.DefineConstructor(constructorAttributes, CallingConventions.Standard, new Type[] { });
 
-            ILGenerator IL = constructor.GetILGenerator();
+            var IL = constructor.GetILGenerator();
 
             constructor.SetImplementationFlags(MethodImplAttributes.IL | MethodImplAttributes.Managed);
 
@@ -240,19 +223,29 @@ namespace LinFu.DynamicProxy
 
             return constructor;
         }
+#if !SILVERLIGHT
+        private static readonly MethodInfo getValue = typeof(SerializationInfo).GetMethod("GetValue",
+            BindingFlags.Public | BindingFlags.Instance, null, new[] {typeof(string), typeof(Type)}, null);
+
+        private static readonly MethodInfo setType = typeof(SerializationInfo).GetMethod("SetType",
+            BindingFlags.Public | BindingFlags.Instance, null, new[] {typeof(Type)}, null);
+
+        private static readonly MethodInfo addValue = typeof(SerializationInfo).GetMethod("AddValue",
+            BindingFlags.Public | BindingFlags.Instance, null, new[] {typeof(string), typeof(object)}, null);
+#endif
 
 #if !SILVERLIGHT
-        private static void ImplementGetObjectData(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField)
+        private static void ImplementGetObjectData(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder,
+            FieldInfo interceptorField)
         {
+            var attributes = MethodAttributes.Public | MethodAttributes.HideBySig |
+                             MethodAttributes.Virtual;
+            Type[] parameterTypes = {typeof(SerializationInfo), typeof(StreamingContext)};
 
-            MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.HideBySig |
-                                          MethodAttributes.Virtual;
-            Type[] parameterTypes = new Type[] { typeof(SerializationInfo), typeof(StreamingContext) };
-
-            MethodBuilder methodBuilder =
+            var methodBuilder =
                 typeBuilder.DefineMethod("GetObjectData", attributes, typeof(void), parameterTypes);
 
-            ILGenerator IL = methodBuilder.GetILGenerator();
+            var IL = methodBuilder.GetILGenerator();
             //LocalBuilder proxyBaseType = IL.DeclareLocal(typeof(Type));
 
             // info.SetType(typeof(ProxyObjectReference));
@@ -274,17 +267,17 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Callvirt, addValue);
 
             var interfaces = baseInterfaces ?? new Type[0];
-            int baseInterfaceCount = interfaces.Length;
+            var baseInterfaceCount = interfaces.Length;
 
             // Save the number of base interfaces
             IL.Emit(OpCodes.Ldarg_1);
             IL.Emit(OpCodes.Ldstr, "__baseInterfaceCount");
             IL.Emit(OpCodes.Ldc_I4, baseInterfaceCount);
-            IL.Emit(OpCodes.Box, typeof(Int32));
+            IL.Emit(OpCodes.Box, typeof(int));
             IL.Emit(OpCodes.Callvirt, addValue);
 
-            int index = 0;
-            foreach (Type baseInterface in interfaces)
+            var index = 0;
+            foreach (var baseInterface in interfaces)
             {
                 IL.Emit(OpCodes.Ldarg_1);
                 IL.Emit(OpCodes.Ldstr, string.Format("__baseInterface{0}", index++));
@@ -293,27 +286,25 @@ namespace LinFu.DynamicProxy
             }
 
             IL.Emit(OpCodes.Ret);
-
         }
 
-        private static void DefineSerializationConstructor(Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
+        private static void DefineSerializationConstructor(Type[] baseInterfaces, TypeBuilder typeBuilder,
+            FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
         {
+            var constructorAttributes = MethodAttributes.Public |
+                                        MethodAttributes.HideBySig | MethodAttributes.SpecialName |
+                                        MethodAttributes.RTSpecialName;
 
-            MethodAttributes constructorAttributes = MethodAttributes.Public |
-                                         MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                                         MethodAttributes.RTSpecialName;
-
-            Type[] parameterTypes = new Type[] { typeof(SerializationInfo), typeof(StreamingContext) };
-            ConstructorBuilder constructor = typeBuilder.DefineConstructor(constructorAttributes,
+            Type[] parameterTypes = {typeof(SerializationInfo), typeof(StreamingContext)};
+            var constructor = typeBuilder.DefineConstructor(constructorAttributes,
                 CallingConventions.Standard, parameterTypes);
 
-            ILGenerator IL = constructor.GetILGenerator();
+            var IL = constructor.GetILGenerator();
 
-            LocalBuilder interceptorType = IL.DeclareLocal(typeof(Type));
+            var interceptorType = IL.DeclareLocal(typeof(Type));
             //LocalBuilder interceptor = IL.DeclareLocal(typeof(IInterceptor));
 
             constructor.SetImplementationFlags(MethodImplAttributes.IL | MethodImplAttributes.Managed);
-
 
 
             IL.Emit(OpCodes.Ldtoken, typeof(IInterceptor));
@@ -333,17 +324,17 @@ namespace LinFu.DynamicProxy
             IL.Emit(OpCodes.Stfld, interceptorField);
 
             IL.Emit(OpCodes.Ret);
-
         }
-        private static void AddSerializationSupport(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder, FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
+
+        private static void AddSerializationSupport(Type baseType, Type[] baseInterfaces, TypeBuilder typeBuilder,
+            FieldInfo interceptorField, ConstructorBuilder defaultConstructor)
         {
-            ConstructorInfo serializableConstructor = typeof(SerializableAttribute).GetConstructor(new Type[0]);
-            CustomAttributeBuilder customAttributeBuilder = new CustomAttributeBuilder(serializableConstructor, new object[0]);
+            var serializableConstructor = typeof(SerializableAttribute).GetConstructor(new Type[0]);
+            var customAttributeBuilder = new CustomAttributeBuilder(serializableConstructor, new object[0]);
             typeBuilder.SetCustomAttribute(customAttributeBuilder);
 
             DefineSerializationConstructor(baseInterfaces, typeBuilder, interceptorField, defaultConstructor);
             ImplementGetObjectData(baseType, baseInterfaces, typeBuilder, interceptorField);
-
         }
 #endif
     }

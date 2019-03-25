@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Reflection;
 
 namespace LinFu.DynamicProxy
 {
@@ -12,32 +10,34 @@ namespace LinFu.DynamicProxy
     {
         private readonly Type _baseType;
         private readonly IProxy _proxy;
+
         protected ProxyObjectReference(SerializationInfo info, StreamingContext context)
         {
             // Deserialize the base type using its assembly qualified name
-            string qualifiedName = info.GetString("__baseType");
+            var qualifiedName = info.GetString("__baseType");
             _baseType = Type.GetType(qualifiedName, true, false);
 
             // Rebuild the list of interfaces
-            List<Type> interfaceList = new List<Type>();
-            int interfaceCount = info.GetInt32("__baseInterfaceCount");
-            for(int i = 0; i < interfaceCount; i++)
+            var interfaceList = new List<Type>();
+            var interfaceCount = info.GetInt32("__baseInterfaceCount");
+            for (var i = 0; i < interfaceCount; i++)
             {
-                string keyName = string.Format("__baseInterface{0}", i);
-		string currentQualifiedName = info.GetString(keyName);
-                Type interfaceType = Type.GetType(currentQualifiedName, true, false);
+                var keyName = string.Format("__baseInterface{0}", i);
+                var currentQualifiedName = info.GetString(keyName);
+                var interfaceType = Type.GetType(currentQualifiedName, true, false);
 
                 interfaceList.Add(interfaceType);
             }
 
             // Reconstruct the proxy
-            ProxyFactory factory = new ProxyFactory();
-            Type proxyType = factory.CreateProxyType(_baseType, interfaceList.ToArray());
+            var factory = new ProxyFactory();
+            var proxyType = factory.CreateProxyType(_baseType, interfaceList.ToArray());
 
             // Initialize the proxy with the deserialized data
-            object[] args = new object[] { info, context };
-            _proxy = (IProxy)Activator.CreateInstance(proxyType, args);
+            object[] args = {info, context};
+            _proxy = (IProxy) Activator.CreateInstance(proxyType, args);
         }
+
         #region IObjectReference Members
 
         public object GetRealObject(StreamingContext context)
@@ -51,7 +51,6 @@ namespace LinFu.DynamicProxy
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-
         }
 
         #endregion

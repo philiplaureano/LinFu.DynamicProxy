@@ -6,10 +6,6 @@ namespace LinFu.DynamicProxy
 {
     public abstract class Interceptor : IInterceptor
     {
-        protected Interceptor()
-        {
-        }
-
         #region IInterceptor Members
 
         public abstract object Intercept(InvocationInfo info);
@@ -22,10 +18,10 @@ namespace LinFu.DynamicProxy
         }
 
         public object Intercept(object proxy, MethodInfo targetMethod,
-                                StackTrace trace, Type[] genericTypeArgs,
-                                object[] args)
+            StackTrace trace, Type[] genericTypeArgs,
+            object[] args)
         {
-            InvocationInfo info = new InvocationInfo(proxy, targetMethod, trace, genericTypeArgs, args);
+            var info = new InvocationInfo(proxy, targetMethod, trace, genericTypeArgs, args);
 
             return Intercept(info);
         }
