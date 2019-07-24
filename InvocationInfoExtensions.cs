@@ -18,7 +18,7 @@ namespace LinFu.DynamicProxy
             var targetMethod = info.TargetMethod;
             var arguments = info.Arguments;
 
-            return targetMethod.FastInvoke(targetInstance, arguments);
+            return targetMethod.Invoke(targetInstance, arguments);
         }
     }
 }
