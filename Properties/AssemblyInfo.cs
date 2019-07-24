@@ -8,7 +8,7 @@ using System.Reflection;
 
 [assembly: AssemblyTitle("LinFu.DynamicProxy")]
 [assembly: AssemblyDescription("A dynamic proxy library for .NET Standard")]
-[assembly: AssemblyCopyright("(c) 2007-2018 Philip Laureano")]
+[assembly: AssemblyCopyright("(c) 2007-2019 Philip Laureano")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
